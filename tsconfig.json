@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "rootDir": "packages",
+    "outDir": "builds/packages",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "target": "ESNext",
+    "declaration": true,
+    "declarationMap": true,
+    "removeComments": false,
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": true,
+    "noImplicitThis": false,
+    "alwaysStrict": true,
+    "noUnusedLocals": false,
+    "importsNotUsedAsValues": "remove",
+    "experimentalDecorators": true,
+    "sourceMap": true,
+    "lib": ["ESNext"]
+  },
+  "include": [
+    "packages/**/*.ts"
+  ],
+  "exclude": [
+    "builds",
+    "node_modules"
+  ]
+}

@@ -1,0 +1,6 @@
+
+dist/
+builds/
+
+*.local
+node_modules
