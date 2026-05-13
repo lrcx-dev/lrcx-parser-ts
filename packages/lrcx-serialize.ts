@@ -16,6 +16,10 @@ import type {
 
 export interface LRCXSerializeOptions {
   newline?: "\n" | "\r\n";
+  /**
+   * Include +duration on body time tags even when a separate #timing row is emitted.
+   */
+  includeLineDurationWithTiming?: boolean;
 }
 
 const STANDARD_MORE_KEYS = [
@@ -58,7 +62,7 @@ export function serializeLRCX(
   const lines = [
     ...serializeHead(instance),
     LrcxConstants.LRCXMarkTag,
-    ...serializeBody(instance),
+    ...serializeBody(instance, options),
   ];
 
   return lines.join(newline);
@@ -147,15 +151,24 @@ function serializeHead(instance: LRCXInstance): string[] {
   return lines;
 }
 
-function serializeBody(instance: LRCXInstance): string[] {
+function serializeBody(
+  instance: LRCXInstance,
+  options: LRCXSerializeOptions,
+): string[] {
   const lines: string[] = [];
 
   for (let index = 0; index < instance.lines.length; index += 1) {
     const line = instance.lines[index];
     const timeMs = instance.times[index];
-    const timeTag = buildBodyTimeTag(instance, index, line);
     const referenceSource = getReferenceSource(instance, line);
     const useReferenceLine = canSerializeAsReference(line, referenceSource);
+    const shouldSerializeTimingLine = Boolean(
+      line.timing && !(useReferenceLine && sameTimingRanges(line.timing, referenceSource?.timing)),
+    );
+    const timeTag = buildBodyTimeTag(instance, index, line, {
+      hasSerializedTimingLine: shouldSerializeTimingLine,
+      includeLineDurationWithTiming: options.includeLineDurationWithTiming === true,
+    });
 
     if (useReferenceLine) {
       const modifierTags = serializeModifierTags(instance, line);
@@ -165,7 +178,7 @@ function serializeBody(instance: LRCXInstance): string[] {
       lines.push(`${timeTag}${modifierTags.join("")}${escapeText(line.text, EscapeContext.BodyText)}`);
     }
 
-    if (line.timing && !(useReferenceLine && sameTimingRanges(line.timing, referenceSource?.timing))) {
+    if (shouldSerializeTimingLine && line.timing) {
       lines.push(`${timeTag}[#timing]${serializeTimingRanges(line.timing)}`);
     }
 
@@ -372,9 +385,15 @@ function buildBodyTimeTag(
   instance: LRCXInstance,
   index: number,
   line: LyricLineContent,
+  options: {
+    hasSerializedTimingLine: boolean;
+    includeLineDurationWithTiming: boolean;
+  },
 ): string {
   const explicitDuration = parseExplicitDuration(instance.lineTags[index]);
-  const duration = explicitDuration ?? getIntrinsicDuration(line);
+  const omitTimingDuration =
+    options.hasSerializedTimingLine && !options.includeLineDurationWithTiming;
+  const duration = omitTimingDuration ? undefined : explicitDuration ?? getIntrinsicDuration(line);
   return formatLyricTimeTag(instance.times[index], duration);
 }
 

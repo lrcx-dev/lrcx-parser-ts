@@ -5,8 +5,16 @@ import {
   parseWith,
 } from "./helpers/lrcx-test-helpers.mjs";
 
+function expectSameRoundTripContent(actual, expected) {
+  expect(actual).toEqual({
+    ...expected,
+    ends: actual.ends,
+    lineTags: actual.lineTags,
+  });
+}
+
 describe("LRCX serializer", () => {
-  test("exports the serializer and keeps the showcase instance stable after round-trip", async () => {
+  test("exports the serializer and keeps the showcase content stable after round-trip", async () => {
     const showcase = await parseShowcase();
     const { mod, result } = showcase;
 
@@ -17,7 +25,33 @@ describe("LRCX serializer", () => {
     const reparsed = await parseWith("Standard", serialized);
 
     expect(reparsed.errors).toHaveLength(0);
-    expect(reparsed.result).toEqual(result);
+    expectSameRoundTripContent(reparsed.result, result);
+  });
+
+  test("omits line duration for serialized timing rows unless the option is enabled", async () => {
+    const text = joinLines([
+      "[#title] T",
+      "[---] v1.0",
+      "",
+      "[00:01.000+600]Source",
+      "[00:01.000+600][#timing]So<300>urce<300>",
+    ]);
+
+    const parsed = await parseWith("Standard", text);
+    const serialized = parsed.mod.serializeLRCX(parsed.result);
+    const verbose = parsed.mod.serializeLRCX(parsed.result, {
+      includeLineDurationWithTiming: true,
+    });
+    const reparsed = await parseWith("Standard", serialized);
+
+    expect(serialized).toContain("[00:01.000]Source");
+    expect(serialized).toContain("[00:01.000][#timing]So<300>urce<300>");
+    expect(serialized).not.toContain("[00:01.000+600]");
+    expect(verbose).toContain("[00:01.000+600]Source");
+    expect(verbose).toContain("[00:01.000+600][#timing]So<300>urce<300>");
+    expect(reparsed.errors).toHaveLength(0);
+    expect(reparsed.result.ends).toEqual(parsed.result.ends);
+    expectSameRoundTripContent(reparsed.result, parsed.result);
   });
 
   test("keeps reference lines compact when local additions do not conflict with inherited tracks", async () => {
@@ -47,7 +81,7 @@ describe("LRCX serializer", () => {
     expect(serialized).not.toContain("[00:01.000+600][#timing]");
     expect(serialized).not.toContain("[00:01.000+600][#romaji_full]");
     expect(reparsed.errors).toHaveLength(0);
-    expect(reparsed.result).toEqual(parsed.result);
+    expectSameRoundTripContent(reparsed.result, parsed.result);
   });
 
   test("expands conflicting reference overrides instead of emitting an invalid shorthand ref line", async () => {
@@ -73,8 +107,9 @@ describe("LRCX serializer", () => {
     const reparsed = await parseWith("Standard", serialized);
 
     expect(serialized).not.toContain("[00:01.000+600][#ref:00:00.000][#A]");
-    expect(serialized).toContain("[00:01.000+600][#A]Source");
-    expect(serialized).toContain("[00:01.000+600][#zh]local zh");
+    expect(serialized).toContain("[00:01.000][#A]Source");
+    expect(serialized).toContain("[00:01.000][#timing]So<300>urce<300>");
+    expect(serialized).toContain("[00:01.000][#zh]local zh");
     expect(reparsed.errors).toHaveLength(0);
     expect(reparsed.result.status).toBe("Success");
     expect(reparsed.result.lines[1]).toMatchObject({
@@ -103,6 +138,6 @@ describe("LRCX serializer", () => {
     expect(serialized).toContain("[00:00.000]A\\[\\<\\^\\>\\\\\\]B");
     expect(serialized).toContain("[00:00.000][#trans]T\\[\\<\\^\\>\\\\\\]R");
     expect(reparsed.errors).toHaveLength(0);
-    expect(reparsed.result).toEqual(parsed.result);
+    expectSameRoundTripContent(reparsed.result, parsed.result);
   });
 });

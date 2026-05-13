@@ -21,11 +21,13 @@
   "scripts": {
     "dev": "node ./scripts/dev-preview.mjs",
     "build": "node ./scripts/run-tsc.mjs -p tsconfig.json",
+    "build:playground": "node ./scripts/build-playground.mjs",
     "build:watch": "node ./scripts/run-tsc.mjs -p tsconfig.json --watch --preserveWatchOutput",
     "test": "node ./scripts/run-tsc.mjs -p tsconfig.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand"
   },
   "devDependencies": {
     "jest": "^30.3.0",
+    "typescript": "^5.9.3",
     "vite": "^8.0.10"
   }
 }
