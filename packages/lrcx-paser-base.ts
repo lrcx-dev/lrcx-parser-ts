@@ -2058,11 +2058,3 @@ function clonePhonetic(phonetic: LyricPhonetic): LyricPhonetic {
   });
   return clonedLine.phonetic[0];
 }
-
-
-
-
-
-
-
-

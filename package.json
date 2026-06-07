@@ -1,9 +1,12 @@
 {
   "name": "lrcx-parser",
+  "version": "0.1.0",
+  "description": "TypeScript parser and serializer for the LRCX lyric format.",
   "type": "module",
   "private": false,
   "main": "./builds/packages/index.js",
   "types": "./builds/packages/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./builds/packages/index.d.ts",
@@ -12,18 +15,37 @@
     }
   },
   "files": [
-    "builds/packages"
+    "builds/packages/*.js",
+    "builds/packages/*.d.ts",
+    "README.md",
+    "LICENSE"
   ],
+  "keywords": [
+    "lrcx",
+    "lyrics",
+    "parser",
+    "serializer",
+    "typescript"
+  ],
+  "license": "MIT",
   "author": {
     "name": "loyuri",
-    "url": "https://loyuri.top"
+    "url": "https://github.com/loyuri"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lrcx-dev/lrcx-parser-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lrcx-dev/lrcx-parser-ts/issues"
+  },
+  "homepage": "https://github.com/lrcx-dev/lrcx-parser-ts#readme",
   "scripts": {
     "dev": "node ./scripts/dev-preview.mjs",
-    "build": "node ./scripts/run-tsc.mjs -p tsconfig.json",
+    "build": "node ./scripts/build-lib.mjs",
     "build:playground": "node ./scripts/build-playground.mjs",
-    "build:watch": "node ./scripts/run-tsc.mjs -p tsconfig.json --watch --preserveWatchOutput",
-    "test": "node ./scripts/run-tsc.mjs -p tsconfig.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand"
+    "build:watch": "node ./scripts/clean-generated.mjs builds/packages && node ./scripts/run-tsc.mjs -p tsconfig.json --watch --preserveWatchOutput",
+    "test": "node ./scripts/build-lib.mjs && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand"
   },
   "devDependencies": {
     "jest": "^30.3.0",

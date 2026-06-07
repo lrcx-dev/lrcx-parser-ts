@@ -3,6 +3,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { cleanGenerated } from "./clean-generated.mjs";
+import { buildLibrary } from "./build-lib.mjs";
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -57,16 +59,13 @@ function run(command, args, label) {
 }
 
 async function main() {
-  const tscEntry = resolveRequiredEntry(
-    ["typescript/bin/tsc", "typescript/lib/tsc.js"],
-    "TypeScript compiler not found. Install 'typescript' locally or ensure it is resolvable from this environment.",
-  );
   const viteEntry = resolveRequiredEntry(
     [resolveViteCli()],
     "Vite CLI not found. Install 'vite' locally before building the playground.",
   );
 
-  await run(process.execPath, [tscEntry, "-p", "tsconfig.json"], "tsc");
+  await cleanGenerated(["dist/playground"]);
+  await buildLibrary();
   await run(
     process.execPath,
     [

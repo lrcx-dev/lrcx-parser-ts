@@ -5,10 +5,10 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { cleanGenerated } from "./clean-generated.mjs";
 
+const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packageRoot = path.resolve(__dirname, "..");
-const require = createRequire(import.meta.url);
 
 function resolveRequiredEntry(specifiers, message) {
   for (const specifier of specifiers) {
@@ -26,40 +26,13 @@ function resolveRequiredEntry(specifiers, message) {
 function resolveViteCli() {
   const vitePackageJson = resolveRequiredEntry(
     ["vite/package.json"],
-    "Vite package not found. Install 'vite' locally before running the preview.",
+    "Vite package not found. Install 'vite' locally before building the library.",
   );
   const viteRoot = path.dirname(vitePackageJson);
   return path.join(viteRoot, "bin", "vite.js");
 }
 
-function spawnProcess(command, args, label) {
-  const child = spawn(command, args, {
-    cwd: packageRoot,
-    stdio: "inherit",
-  });
-
-  child.on("error", (error) => {
-    console.error(`[${label}] ${error instanceof Error ? error.message : String(error)}`);
-    shutdown(1);
-  });
-
-  child.on("exit", (code, signal) => {
-    if (isShuttingDown) {
-      return;
-    }
-    if (signal) {
-      console.error(`[${label}] exited with signal ${signal}`);
-    } else if ((code ?? 0) !== 0) {
-      console.error(`[${label}] exited with code ${code}`);
-    }
-    shutdown(code ?? 1);
-  });
-
-  children.add(child);
-  return child;
-}
-
-function runOnce(command, args, label) {
+function run(command, args, label) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: packageRoot,
@@ -84,73 +57,39 @@ function runOnce(command, args, label) {
   });
 }
 
-let isShuttingDown = false;
-const children = new Set();
-
-function shutdown(code = 0) {
-  if (isShuttingDown) {
-    return;
-  }
-  isShuttingDown = true;
-
-  for (const child of children) {
-    if (!child.killed) {
-      child.kill("SIGTERM");
-    }
-  }
-
-  setTimeout(() => {
-    for (const child of children) {
-      if (!child.killed) {
-        child.kill("SIGKILL");
-      }
-    }
-    process.exit(code);
-  }, 250).unref();
-}
-
-async function main() {
+export async function buildLibrary() {
   const tscEntry = resolveRequiredEntry(
     ["typescript/bin/tsc", "typescript/lib/tsc.js"],
     "TypeScript compiler not found. Install 'typescript' locally or ensure it is resolvable from this environment.",
   );
   const viteEntry = resolveRequiredEntry(
     [resolveViteCli()],
-    "Vite CLI not found. Install 'vite' locally before running the preview.",
+    "Vite CLI not found. Install 'vite' locally before building the library.",
   );
 
   await cleanGenerated(["builds/packages"]);
-
-  await runOnce(
+  await run(
     process.execPath,
-    [tscEntry, "-p", "tsconfig.json"],
-    "tsc",
+    [tscEntry, "-p", "tsconfig.json", "--emitDeclarationOnly"],
+    "tsc-dts",
   );
-
-  spawnProcess(
-    process.execPath,
-    [tscEntry, "-p", "tsconfig.json", "--watch", "--preserveWatchOutput"],
-    "tsc-watch",
-  );
-
-  spawnProcess(
+  await run(
     process.execPath,
     [
       viteEntry,
+      "build",
       "--config",
-      "playground/vite.config.mjs",
+      "vite.lib.config.mjs",
       "--configLoader",
       "native",
-      "--host",
     ],
-    "vite",
+    "vite-lib",
   );
 }
 
-process.on("SIGINT", () => shutdown(0));
-process.on("SIGTERM", () => shutdown(0));
-
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  shutdown(1);
-});
+if (process.argv[1] === __filename) {
+  buildLibrary().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}

@@ -62,6 +62,7 @@ export function serializeLRCX(
   const lines = [
     ...serializeHead(instance),
     LrcxConstants.LRCXMarkTag,
+    '\n',
     ...serializeBody(instance, options),
   ];
 

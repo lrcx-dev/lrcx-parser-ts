@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "target": "ESNext",
     "declaration": true,
-    "declarationMap": true,
+    "declarationMap": false,
     "removeComments": false,
     "strict": true,
     "noImplicitAny": false,
@@ -17,7 +17,7 @@
     "noUnusedLocals": false,
     "importsNotUsedAsValues": "remove",
     "experimentalDecorators": true,
-    "sourceMap": true,
+    "sourceMap": false,
     "lib": ["ESNext"]
   },
   "include": [
