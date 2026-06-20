@@ -26,6 +26,7 @@ import type {
   LRCXParsePhase,
   LRCXSourceLocation,
   LRCXSourceSection,
+  LyricHangingLine,
   LyricLineContent,
   LyricPhonetic,
   LyricTimingRange,
@@ -54,6 +55,7 @@ interface ContentTagInfo {
   normalizedBase: string;
   path: string[];
   argText: string;
+  hasArg: boolean;
   args: string[];
   location: LRCXSourceLocation;
 }
@@ -61,6 +63,7 @@ interface ContentTagInfo {
 interface ParsedBodyLine {
   source: SourceLine;
   timeInfo: LineTimeInfo;
+  bodyRaw: string;
   tags: ContentTagInfo[];
   text: string;
   textStartIndex: number;
@@ -781,6 +784,7 @@ export abstract class LRCXParserBase {
     return {
       source: line,
       timeInfo,
+      bodyRaw: line.raw.slice(closeIndex + 1),
       tags,
       text: line.raw.slice(textStartIndex),
       textStartIndex,
@@ -843,7 +847,36 @@ export abstract class LRCXParserBase {
     const usedTagBases = new Set<string>();
     let hasExplicitTrack = false;
 
+    if (parsed.tags.some((tag) => tag.normalizedBase === "ignore")) {
+      lineContent.hangings.push(this.buildHangingLine(parsed));
+      return {
+        flow: "ok",
+        lineContent,
+        explicitDuration: parsed.timeInfo.duration,
+      };
+    }
+
+    if (parsed.tags.some((tag) => tag.normalizedBase === "append")) {
+      if (!this.validateDeclaredHangingTags(parsed)) {
+        return { flow: "stop" };
+      }
+      if (parsed.tags.some((tag) => tag.normalizedBase === "hidden")) {
+        this.applyHidden(lineContent);
+      }
+      lineContent.hangings.push(this.buildHangingLine(parsed));
+      return {
+        flow: "ok",
+        lineContent,
+        explicitDuration: parsed.timeInfo.duration,
+      };
+    }
+
     for (const tag of parsed.tags) {
+      if (tag.normalizedBase === "hidden") {
+        this.applyHidden(lineContent);
+        continue;
+      }
+
       const classification = this.classifyBodyTag(tag);
       if (!classification) {
         const action = this.emitDiagnostic(LRCXErrorTypes.MARK_NOTFOUND, {
@@ -996,6 +1029,71 @@ export abstract class LRCXParserBase {
       case "ignore":
         return { flow: "skip" };
     }
+  }
+
+  protected validateDeclaredHangingTags(parsed: ParsedBodyLine): boolean {
+    for (const tag of parsed.tags) {
+      if (this.hasDeclaredTag(tag.rawBase)) {
+        continue;
+      }
+
+      const action = this.emitDiagnostic(LRCXErrorTypes.MARK_NOTFOUND, {
+        location: tag.location,
+        lineTag: parsed.timeInfo.rawTag,
+        timeMs: parsed.timeInfo.time,
+        lyricPosition: {
+          timeMs: parsed.timeInfo.time,
+          timeTag: parsed.timeInfo.rawTag,
+          tag: tag.rawBase,
+        },
+      });
+      if (this.isStopAction(action)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  protected buildHangingLine(parsed: ParsedBodyLine): LyricHangingLine {
+    const hanging: LyricHangingLine = {
+      raw: parsed.bodyRaw,
+      text: unescapeLrcxText(parsed.text),
+      marks: parsed.tags.map((tag) => tag.rawBase || tag.raw),
+    };
+
+    for (const tag of parsed.tags) {
+      this.applyHangingAttribute(hanging, tag);
+    }
+
+    return hanging;
+  }
+
+  protected applyHangingAttribute(
+    hanging: LyricHangingLine,
+    tag: ContentTagInfo,
+  ): void {
+    if (!tag.hasArg || tag.path.length === 0) {
+      return;
+    }
+
+    if (
+      tag.normalizedBase === "append" &&
+      tag.path.length === 2 &&
+      /^\d+$/.test(tag.path[1])
+    ) {
+      const index = Number.parseInt(tag.path[1], 10);
+      hanging.values = hanging.values ?? [];
+      hanging.values[index] = tag.argText;
+      return;
+    }
+
+    hanging.attr = hanging.attr ?? {};
+    hanging.attr[tag.path.join(".")] = tag.argText;
+  }
+
+  protected applyHidden(lineContent: LyricLineContent): void {
+    lineContent.attr = lineContent.attr ?? {};
+    lineContent.attr.hidden = "true";
   }
 
   protected classifyBodyTag(tag: ContentTagInfo):
@@ -1673,6 +1771,10 @@ export abstract class LRCXParserBase {
       }
     }
 
+    for (const hanging of source.hangings) {
+      target.hangings.push(cloneHangingLine(hanging));
+    }
+
     if (source.attr) {
       target.attr = target.attr ?? {};
       for (const [rawKey, value] of Object.entries(source.attr)) {
@@ -2054,7 +2156,23 @@ function clonePhonetic(phonetic: LyricPhonetic): LyricPhonetic {
     phonetic: [phonetic],
     back: undefined,
     marks: [],
+    hangings: [],
     attr: undefined,
   });
   return clonedLine.phonetic[0];
+}
+
+function cloneHangingLine(hanging: LyricHangingLine): LyricHangingLine {
+  const cloned: LyricHangingLine = {
+    raw: hanging.raw,
+    text: hanging.text,
+    marks: [...hanging.marks],
+  };
+  if (hanging.attr) {
+    cloned.attr = { ...hanging.attr };
+  }
+  if (hanging.values) {
+    cloned.values = [...hanging.values];
+  }
+  return cloned;
 }

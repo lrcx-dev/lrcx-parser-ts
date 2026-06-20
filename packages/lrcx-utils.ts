@@ -286,6 +286,7 @@ export interface ParsedTagExpression {
   normalizedBase: string;
   path: string[];
   argText: string;
+  hasArg: boolean;
   args: string[];
 }
 
@@ -523,6 +524,7 @@ export function createLrcxLine(text = ""): LyricLineContent {
     phonetic: [],
     back: undefined,
     marks: [],
+    hangings: [],
     attr: undefined,
   };
 }
@@ -592,6 +594,7 @@ export function parseTagExpression(inner: string): ParsedTagExpression {
     normalizedBase: (path[0] ?? "").toLowerCase(),
     path,
     argText,
+    hasArg: colonIndex !== -1,
     args: argText ? splitByComma(argText) : [],
   };
 }
@@ -661,6 +664,21 @@ export function cloneLyricPhonetic(phonetic: LyricPhonetic): LyricPhonetic {
 }
 
 export function cloneLyricLineContent(line: LyricLineContent): LyricLineContent {
+  const hangings = line.hangings.map((hanging) => {
+    const cloned = {
+      raw: hanging.raw,
+      text: hanging.text,
+      marks: [...hanging.marks],
+    } as LyricLineContent["hangings"][number];
+    if (hanging.attr) {
+      cloned.attr = { ...hanging.attr };
+    }
+    if (hanging.values) {
+      cloned.values = [...hanging.values];
+    }
+    return cloned;
+  });
+
   return {
     text: line.text,
     timing: cloneTimingRanges(line.timing),
@@ -668,6 +686,7 @@ export function cloneLyricLineContent(line: LyricLineContent): LyricLineContent 
     phonetic: line.phonetic.map(cloneLyricPhonetic),
     back: line.back?.map((track) => track.map((token) => ({ ...token }))),
     marks: [...line.marks],
+    hangings,
     attr: line.attr ? { ...line.attr } : undefined,
   };
 }

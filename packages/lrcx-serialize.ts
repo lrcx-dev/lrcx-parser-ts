@@ -160,6 +160,7 @@ function serializeBody(
 
   for (let index = 0; index < instance.lines.length; index += 1) {
     const line = instance.lines[index];
+    const hangings = line.hangings ?? [];
     const timeMs = instance.times[index];
     const referenceSource = getReferenceSource(instance, line);
     const useReferenceLine = canSerializeAsReference(line, referenceSource);
@@ -211,7 +212,18 @@ function serializeBody(
       }
     }
 
-    if (!line.text && !line.attr?.ref && !line.timing && !line.back && timeMs >= 0) {
+    for (const hanging of hangings) {
+      lines.push(`${timeTag}${hanging.raw}`);
+    }
+
+    if (
+      !line.text &&
+      !line.attr?.ref &&
+      !line.timing &&
+      !line.back &&
+      hangings.length === 0 &&
+      timeMs >= 0
+    ) {
       continue;
     }
 
@@ -503,8 +515,12 @@ function serializeModifierTags(
   const attrs = line.attr ? Object.entries(line.attr) : [];
   const grouped = new Map<string, Array<[string, string]>>();
 
+  if (line.attr?.hidden) {
+    tags.push("[#hidden]");
+  }
+
   for (const [key, value] of attrs) {
-    if (!value || key === "ref" || key.startsWith("back.")) {
+    if (!value || key === "ref" || key === "hidden" || key.startsWith("back.")) {
       continue;
     }
     const base = key.split(".")[0];

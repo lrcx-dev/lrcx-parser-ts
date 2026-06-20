@@ -236,6 +236,18 @@ describe("LRCX showcase draft compliance", () => {
       text: "Wu~~~ Wu~~ Oh~ Yeah~~~!",
       marks: ["A"],
     });
+    expect(chant.hangings).toEqual([
+      {
+        raw: "[#ignore]本行用于词测试异常，#timing行与主行内容空格不一致。正确的#timin行如下：",
+        text: "本行用于词测试异常，#timing行与主行内容空格不一致。正确的#timin行如下：",
+        marks: ["ignore"],
+      },
+      {
+        raw: "[#ignore][#timing]Wu~~~<3612> <360>Wu~~<1378> <396>Oh~ <548>Yeah~~~!<1716>",
+        text: "Wu~~~<3612> <360>Wu~~<1378> <396>Oh~ <548>Yeah~~~!<1716>",
+        marks: ["ignore", "timing"],
+      },
+    ]);
 
     expect(referenceLine).toMatchObject({
       text: "きっと今なら",

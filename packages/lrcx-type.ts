@@ -139,9 +139,19 @@ export interface LyricLineContent {
   phonetic: LyricPhonetic[];
   back?: LyricTimingToken[][];
   marks: string[];
+  hangings: LyricHangingLine[];
   attr?: {
     [key: string]: string;
   };
+}
+export interface LyricHangingLine {
+  raw: string;
+  text: string;
+  marks: string[];
+  attr?: {
+    [key: string]: string;
+  };
+  values?: Array<string | undefined>;
 }
 
 export interface LyricInfo {
@@ -229,6 +239,8 @@ export const LRCXBuiltinBodyTags = [
   "back",
   "ref",
   "ignore",
+  "append",
+  "hidden",
   "trans",
 ] as const;
 

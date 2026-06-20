@@ -13,7 +13,7 @@ TypeScript parser and serializer for the LRCX v1.0 lyric format, with strictness
 
 ## Playground
 
-Online preview: [http://lrcx-dev.github.io/lrcx-parser-ts/](http://lrcx-dev.github.io/lrcx-parser-ts/)
+Parser Playground: [https://lrcx-dev.github.io/lrcx-parser-ts/](https://lrcx-dev.github.io/lrcx-parser-ts/)
 
 Local preview:
 
@@ -21,19 +21,6 @@ Local preview:
 npm install
 npm run dev
 ```
-
-`npm run dev` does three things in order:
-
-1. Removes stale sourcemaps from the previous library build.
-2. Runs one TypeScript build into `builds/packages/`.
-3. Starts `tsc --watch` and the Vite dev server for `playground/`.
-
-`scripts/run-tsc.mjs` is only a thin wrapper around the locally installed TypeScript CLI. It resolves `typescript` from `node_modules` and forwards the arguments unchanged.
-
-For npm publishing, `npm run build` uses a different pipeline:
-
-1. `tsc --emitDeclarationOnly` writes `.d.ts` files into `builds/packages/`.
-2. Vite lib mode rebuilds `packages/index.ts` into minified ESM JavaScript in the same output directory.
 
 ## Get Started
 
@@ -88,6 +75,23 @@ Common commands:
 | `npm run build:playground` | Rebuild the library and emit the static playground bundle to `dist/playground/`. |
 | `npm run dev` | Build once, then run the library watcher and the playground dev server together. |
 | `npm test` | Rebuild the publish artifact and run the Jest suite in-band. |
+
+
+`npm run dev` does three things in order:
+
+1. Removes stale sourcemaps from the previous library build.
+2. Runs one TypeScript build into `builds/packages/`.
+3. Starts `tsc --watch` and the Vite dev server for `playground/`.
+
+`scripts/run-tsc.mjs` is only a thin wrapper around the locally installed TypeScript CLI. It resolves `typescript` from `node_modules` and forwards the arguments unchanged.
+
+For npm publishing, `npm run build` uses a different pipeline:
+
+1. `tsc --emitDeclarationOnly` writes `.d.ts` files into `builds/packages/`.
+2. Vite lib mode rebuilds `packages/index.ts` into minified ESM JavaScript in the same output directory.
+
+
+### Test
 
 Test coverage is organized around the public library surface:
 

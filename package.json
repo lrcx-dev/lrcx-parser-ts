@@ -1,6 +1,6 @@
 {
   "name": "lrcx-parser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript parser and serializer for the LRCX lyric format.",
   "type": "module",
   "private": false,
